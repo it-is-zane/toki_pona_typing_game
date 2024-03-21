@@ -13,6 +13,6 @@ toml = "0.8.12"
 crossterm = "0.27.0"
 directories = "5.0.1"
 rand = "0.8.5"
-ratatui = "0.24.0"
+ratatui = "0.26.1"
 serde = { version = "1.0.197", features = ["derive"] }
 toml = "0.8.12"
