@@ -1,0 +1,51 @@
+#:schema ../../api/generated/word.json
+id = "sina"
+author_verbatim = ""
+author_verbatim_source = ""
+book = "pu"
+coined_era = "pre-pu"
+coined_year = ""
+creator = ["jan Sonja"]
+see_also = []
+source_language = "Finnish"
+usage_category = "core"
+word = "sina"
+deprecated = false
+
+[[audio]]
+author = "kala Asi"
+link = "https://raw.githubusercontent.com/lipu-linku/ijo/main/kalama/kalaasi2023/sina.mp3"
+
+[[audio]]
+author = "jan Lakuse"
+link = "https://raw.githubusercontent.com/lipu-linku/ijo/main/kalama/jlakuse/sina.mp3"
+
+[[etymology]]
+word = "sinä"
+
+[ku_data]
+you = 94
+your = 88
+yours = 83
+yourself = 67
+
+[pu_verbatim]
+de = "NOMEN du, Sie, ihr"
+en = "NOUN you"
+eo = "SUBSTANTIVO vi"
+fr = "NOM tu, toi, vous"
+
+[representations]
+ligatures = ["sina"]
+ucsur = "U+F195E"
+sitelen_emosi = "👉"
+sitelen_sitelen = "https://raw.githubusercontent.com/lipu-linku/ijo/main/sitelensitelen/jonathangabel/sina.jpg"
+sitelen_jelo = ["👆", "6️⃣"]
+
+[usage]
+2022-08 = 100
+2023-09 = 100
+
+[resources]
+sona_pona = "https://sona.pona.la/wiki/sina"
+lipamanka_semantic = "https://lipamanka.gay/essays/dictionary#sina"

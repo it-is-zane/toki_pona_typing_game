@@ -1,0 +1,67 @@
+#:schema ../../api/generated/word.json
+id = "insa"
+author_verbatim = ""
+author_verbatim_source = ""
+book = "pu"
+coined_era = "pre-pu"
+coined_year = ""
+creator = ["jan Sonja"]
+see_also = []
+source_language = "Tok Pisin"
+usage_category = "core"
+word = "insa"
+deprecated = false
+
+[[audio]]
+author = "kala Asi"
+link = "https://raw.githubusercontent.com/lipu-linku/ijo/main/kalama/kalaasi2023/insa.mp3"
+
+[[audio]]
+author = "jan Lakuse"
+link = "https://raw.githubusercontent.com/lipu-linku/ijo/main/kalama/jlakuse/insa.mp3"
+
+[[etymology]]
+word = "insait"
+
+[[etymology]]
+word = "inside"
+
+[ku_data]
+amid = 27
+belly = 54
+between = 27
+central = 60
+centre = 91
+content = 27
+core = 67
+guts = 71
+inner = 100
+insert = 31
+inside = 58
+interior = 93
+internal = 100
+"internal organ" = 38
+middle = 56
+stomach = 41
+within = 35
+
+[pu_verbatim]
+de = "NOMEN Zentrum, Inhalt, Inneres, zwischen; inneres Organ, Magen"
+en = "NOUN centre, content, inside, between; internal organ, stomach"
+eo = "SUBSTANTIVO centro, enhavo, eno, inter; ena organo, ventro, stomako"
+fr = "NOM centre, contenu, intérieur, entre ; estomac, viscères"
+
+[representations]
+ligatures = ["insa"]
+ucsur = "U+F190F"
+sitelen_emosi = "⏺️"
+sitelen_sitelen = "https://raw.githubusercontent.com/lipu-linku/ijo/main/sitelensitelen/jonathangabel/insa.jpg"
+sitelen_jelo = ["🗳️"]
+
+[usage]
+2022-08 = 99
+2023-09 = 100
+
+[resources]
+sona_pona = "https://sona.pona.la/wiki/insa"
+lipamanka_semantic = "https://lipamanka.gay/essays/dictionary#insa"

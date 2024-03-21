@@ -1,0 +1,65 @@
+#:schema ../../api/generated/word.json
+id = "jan"
+author_verbatim = ""
+author_verbatim_source = ""
+book = "pu"
+coined_era = "pre-pu"
+coined_year = ""
+creator = ["jan Sonja"]
+see_also = []
+source_language = "Cantonese"
+usage_category = "core"
+word = "jan"
+deprecated = false
+
+[[audio]]
+author = "kala Asi"
+link = "https://raw.githubusercontent.com/lipu-linku/ijo/main/kalama/kalaasi2023/jan.mp3"
+
+[[audio]]
+author = "jan Lakuse"
+link = "https://raw.githubusercontent.com/lipu-linku/ijo/main/kalama/jlakuse/jan.mp3"
+
+[[etymology]]
+alt = "jan"
+word = "人"
+
+[ku_data]
+Hominidae = 27
+anybody = 62
+anyone = 56
+being = 42
+character = 50
+citizen = 30
+civilian = 30
+dude = 61
+guy = 43
+human = 93
+individual = 31
+participant = 29
+people = 82
+person = 100
+personal = 27
+somebody = 50
+whoever = 30
+
+[pu_verbatim]
+de = "NOMEN Mensch, Person, jemand"
+en = "NOUN human being, person, somebody"
+eo = "SUBSTANTIVO homo, persono, iu"
+fr = "NOM être humain, personne, quelqu'un"
+
+[representations]
+ligatures = ["jan"]
+ucsur = "U+F1911"
+sitelen_emosi = "👤"
+sitelen_sitelen = "https://raw.githubusercontent.com/lipu-linku/ijo/main/sitelensitelen/jonathangabel/jan.jpg"
+sitelen_jelo = ["🧑"]
+
+[usage]
+2022-08 = 99
+2023-09 = 100
+
+[resources]
+sona_pona = "https://sona.pona.la/wiki/jan"
+lipamanka_semantic = "https://lipamanka.gay/essays/dictionary#jan"

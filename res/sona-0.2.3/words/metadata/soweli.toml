@@ -1,0 +1,69 @@
+#:schema ../../api/generated/word.json
+id = "soweli"
+author_verbatim = ""
+author_verbatim_source = ""
+book = "pu"
+coined_era = "pre-pu"
+coined_year = ""
+creator = ["jan Sonja"]
+see_also = []
+source_language = "Georgian"
+usage_category = "core"
+word = "soweli"
+deprecated = false
+
+[[audio]]
+author = "kala Asi"
+link = "https://raw.githubusercontent.com/lipu-linku/ijo/main/kalama/kalaasi2023/soweli.mp3"
+
+[[audio]]
+author = "jan Lakuse"
+link = "https://raw.githubusercontent.com/lipu-linku/ijo/main/kalama/jlakuse/soweli.mp3"
+
+[[etymology]]
+alt = "cxoveli"
+word = "ცხოველი"
+
+[ku_data]
+Hominidae = 27
+Musteloidea = 50
+animal = 95
+beast = 43
+capybara = 40
+cat = 61
+creature = 71
+deer = 87
+dog = 67
+goat = 56
+horse = 32
+"large domesticated animal" = 27
+lion = 42
+llama = 58
+monkey = 26
+"mouse (2020)" = 30
+pig = 40
+procyonid = 26
+rabbit = 25
+tiger = 29
+wolf = 36
+
+[pu_verbatim]
+de = "NOMEN Tier, Biest, Landsäugetier"
+en = "NOUN animal, beast, land mammal"
+eo = "SUBSTANTIVO besto, surtera mamulo"
+fr = "NOM animal, mammifère terrestre"
+
+[representations]
+ligatures = ["soweli"]
+ucsur = "U+F1962"
+sitelen_emosi = "🐒"
+sitelen_sitelen = "https://raw.githubusercontent.com/lipu-linku/ijo/main/sitelensitelen/jonathangabel/soweli.jpg"
+sitelen_jelo = ["🦔"]
+
+[usage]
+2022-08 = 100
+2023-09 = 100
+
+[resources]
+sona_pona = "https://sona.pona.la/wiki/soweli"
+lipamanka_semantic = "https://lipamanka.gay/essays/dictionary#soweli"

@@ -1,0 +1,54 @@
+#:schema ../../api/generated/word.json
+id = "uta"
+author_verbatim = ""
+author_verbatim_source = ""
+book = "pu"
+coined_era = "pre-pu"
+coined_year = ""
+creator = ["jan Sonja"]
+see_also = []
+source_language = "Serbo-Croatian"
+usage_category = "core"
+word = "uta"
+deprecated = false
+
+[[audio]]
+author = "kala Asi"
+link = "https://raw.githubusercontent.com/lipu-linku/ijo/main/kalama/kalaasi2023/uta.mp3"
+
+[[audio]]
+author = "jan Lakuse"
+link = "https://raw.githubusercontent.com/lipu-linku/ijo/main/kalama/jlakuse/uta.mp3"
+
+[[etymology]]
+alt = "usta"
+word = "уста"
+
+[ku_data]
+bite = 31
+chew = 25
+jaw = 42
+kiss = 44
+lip = 47
+mouth = 100
+
+[pu_verbatim]
+de = "NOMEN Mund, Lippen, Mundhöhle, Kiefer"
+en = "NOUN mouth,lips, oral cavity, jaw"
+eo = "SUBSTANTIVO buŝo, lipoj, buŝa kavo, makzeloj"
+fr = "NOM bouche, lèvres, cavité buccale, mâchoire"
+
+[representations]
+ligatures = ["uta", "uta2"]
+ucsur = "U+F1970"
+sitelen_emosi = "👄"
+sitelen_sitelen = "https://raw.githubusercontent.com/lipu-linku/ijo/main/sitelensitelen/jonathangabel/uta.jpg"
+sitelen_jelo = ["👄"]
+
+[usage]
+2022-08 = 98
+2023-09 = 99
+
+[resources]
+sona_pona = "https://sona.pona.la/wiki/uta"
+lipamanka_semantic = "https://lipamanka.gay/essays/dictionary#uta"

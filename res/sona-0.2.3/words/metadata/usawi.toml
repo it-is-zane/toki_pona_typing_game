@@ -1,0 +1,34 @@
+#:schema ../../api/generated/word.json
+id = "usawi"
+author_verbatim = ""
+author_verbatim_source = ""
+book = "ku lili"
+coined_era = "post-pu"
+coined_year = "2019"
+creator = ["jan Tumu"]
+see_also = ["wawa", "nasa", "ken"]
+source_language = "Swahili"
+usage_category = "obscure"
+word = "usawi"
+deprecated = false
+
+[[audio]]
+author = "kala Asi"
+link = "https://raw.githubusercontent.com/lipu-linku/ijo/main/kalama/kalaasi2023/usawi.mp3"
+
+[[etymology]]
+word = "uchawi"
+
+[ku_data]
+magic = 7
+
+[representations]
+ligatures = ["usawi"]
+
+[usage]
+2021-10 = 41
+2022-08 = 16
+2023-09 = 22
+
+[resources]
+sona_pona = "https://sona.pona.la/wiki/usawi"

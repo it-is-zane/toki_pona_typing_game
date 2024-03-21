@@ -1,0 +1,49 @@
+#:schema ../../api/generated/word.json
+id = "akesi"
+author_verbatim = ""
+author_verbatim_source = ""
+book = "pu"
+coined_era = "pre-pu"
+coined_year = ""
+creator = ["jan Sonja"]
+see_also = []
+source_language = "Dutch"
+usage_category = "core"
+word = "akesi"
+deprecated = false
+
+[[audio]]
+author = "kala Asi"
+link = "https://raw.githubusercontent.com/lipu-linku/ijo/main/kalama/kalaasi2023/akesi.mp3"
+
+[[audio]]
+author = "jan Lakuse"
+link = "https://raw.githubusercontent.com/lipu-linku/ijo/main/kalama/jlakuse/akesi.mp3"
+
+[[etymology]]
+word = "hagedis"
+
+[ku_data]
+frog = 56
+reptile = 96
+
+[pu_verbatim]
+de = "NOMEN nichtsüßes Tier; Reptil, Amphibie"
+en = "NOUN non-cute animal; reptile, amphibian"
+eo = "SUBSTANTIVO reptilio, amfibio"
+fr = "NOM animal non-mignon ; reptile, amphibien"
+
+[representations]
+ligatures = ["akesi", "akesi2"]
+ucsur = "U+F1901"
+sitelen_emosi = "🦎"
+sitelen_sitelen = "https://raw.githubusercontent.com/lipu-linku/ijo/main/sitelensitelen/jonathangabel/akesi.jpg"
+sitelen_jelo = ["🦎", "🐸"]
+
+[usage]
+2022-08 = 98
+2023-09 = 99
+
+[resources]
+sona_pona = "https://sona.pona.la/wiki/akesi"
+lipamanka_semantic = "https://lipamanka.gay/essays/dictionary#akesi"

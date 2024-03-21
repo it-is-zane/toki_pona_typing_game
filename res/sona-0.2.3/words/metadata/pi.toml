@@ -1,0 +1,51 @@
+#:schema ../../api/generated/word.json
+id = "pi"
+author_verbatim = ""
+author_verbatim_source = ""
+book = "pu"
+coined_era = "pre-pu"
+coined_year = ""
+creator = ["jan Sonja"]
+see_also = []
+source_language = "Tok Pisin"
+usage_category = "core"
+word = "pi"
+deprecated = false
+
+[[audio]]
+author = "kala Asi"
+link = "https://raw.githubusercontent.com/lipu-linku/ijo/main/kalama/kalaasi2023/pi.mp3"
+
+[[audio]]
+author = "jan Lakuse"
+link = "https://raw.githubusercontent.com/lipu-linku/ijo/main/kalama/jlakuse/pi.mp3"
+
+[[etymology]]
+word = "bilong"
+
+[[etymology]]
+word = "belong"
+
+[ku_data]
+about = 9
+concerning = 20
+
+[pu_verbatim]
+de = "PARTIKEL von, des, der (teils wie Genitiv)"
+en = "PARTICLE of"
+eo = "PARTIKULO de"
+fr = "PARTICULE de"
+
+[representations]
+ligatures = ["pi"]
+ucsur = "U+F194D"
+sitelen_emosi = "⏹️"
+sitelen_sitelen = "https://raw.githubusercontent.com/lipu-linku/ijo/main/sitelensitelen/jonathangabel/pi.jpg"
+sitelen_jelo = ["📎"]
+
+[usage]
+2022-08 = 98
+2023-09 = 99
+
+[resources]
+sona_pona = "https://sona.pona.la/wiki/pi"

@@ -1,0 +1,47 @@
+#:schema ../../api/generated/word.json
+id = "misikeke"
+author_verbatim = "misikeke means medicine"
+author_verbatim_source = "https://discord.com/channels/301377942062366741/301377942062366741/640757500848766977"
+book = "ku suli"
+coined_era = "post-pu"
+coined_year = "2019"
+creator = ["jan Sonja"]
+see_also = ["moku", "pona"]
+source_language = "Ojibwe"
+usage_category = "common"
+word = "misikeke"
+deprecated = false
+
+[[audio]]
+author = "kala Asi"
+link = "https://raw.githubusercontent.com/lipu-linku/ijo/main/kalama/kalaasi2023/misikeke.mp3"
+
+[[audio]]
+author = "jan Lakuse"
+link = "https://raw.githubusercontent.com/lipu-linku/ijo/main/kalama/jlakuse/misikeke.mp3"
+
+[[etymology]]
+word = "mashkiki"
+
+[ku_data]
+cure = 40
+medical = 30
+medication = 46
+medicine = 42
+pill = 30
+
+[representations]
+ligatures = ["misikeke"]
+ucsur = "U+F1987"
+sitelen_emosi = "💊"
+sitelen_sitelen = "https://raw.githubusercontent.com/lipu-linku/ijo/main/sitelensitelen/jonathangabel/misikeke.jpg"
+sitelen_jelo = ["💊"]
+
+[usage]
+2020-04 = 21
+2021-10 = 71
+2022-08 = 63
+2023-09 = 60
+
+[resources]
+sona_pona = "https://sona.pona.la/wiki/misikeke"

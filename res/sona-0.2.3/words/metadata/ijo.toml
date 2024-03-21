@@ -1,0 +1,69 @@
+#:schema ../../api/generated/word.json
+id = "ijo"
+author_verbatim = ""
+author_verbatim_source = ""
+book = "pu"
+coined_era = "pre-pu"
+coined_year = ""
+creator = ["jan Sonja"]
+see_also = []
+source_language = "Esperanto"
+usage_category = "core"
+word = "ijo"
+deprecated = false
+
+[[audio]]
+author = "kala Asi"
+link = "https://raw.githubusercontent.com/lipu-linku/ijo/main/kalama/kalaasi2023/ijo.mp3"
+
+[[audio]]
+author = "jan Lakuse"
+link = "https://raw.githubusercontent.com/lipu-linku/ijo/main/kalama/jlakuse/ijo.mp3"
+
+[[etymology]]
+word = "io"
+
+[[etymology]]
+word = "i-"
+
+[ku_data]
+anything = 50
+asset = 33
+being = 33
+chemical = 32
+element = 38
+entity = 82
+example = 25
+item = 100
+material = 63
+"matter (n)" = 62
+object = 100
+phenomenon = 67
+product = 29
+something = 100
+stock = 27
+stuff = 100
+subject = 30
+substance = 53
+thing = 100
+
+[pu_verbatim]
+de = "NOMEN Ding, Phänomen, Objekt, Angelegenheit"
+en = "NOUN thing, phenomenon, object, matter"
+eo = "SUBSTANTIVO aĵo, fenomeno, objekto, afero"
+fr = "NOM chose, phénomène, objet, matière"
+
+[representations]
+ligatures = ["ijo"]
+ucsur = "U+F190C"
+sitelen_emosi = "🐚"
+sitelen_sitelen = "https://raw.githubusercontent.com/lipu-linku/ijo/main/sitelensitelen/jonathangabel/ijo.jpg"
+sitelen_jelo = ["🐚"]
+
+[usage]
+2022-08 = 99
+2023-09 = 100
+
+[resources]
+sona_pona = "https://sona.pona.la/wiki/ijo"
+lipamanka_semantic = "https://lipamanka.gay/essays/dictionary#ijo"
