@@ -1,15 +1,15 @@
+use crossterm::{
+    event::{self, Event, KeyCode, KeyEvent, KeyModifiers},
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    ExecutableCommand,
+};
+use rand::seq::IteratorRandom;
+use rand::seq::SliceRandom;
+use ratatui::{layout::Layout, prelude::*, text::Line, widgets::*};
 use std::{
     io::{self, stdout},
     time::Instant,
 };
-
-use crossterm::{
-    event::{self, Event, KeyCode},
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
-    ExecutableCommand,
-};
-use rand::{rngs::ThreadRng, seq::IteratorRandom};
-use ratatui::{prelude::*, text::Line, widgets::*};
 use toml::Table;
 
 struct Word<'a> {
@@ -24,7 +24,6 @@ struct Word<'a> {
 struct Test<'a> {
     words: Vec<Word<'a>>,
     index: usize,
-    rng: ThreadRng,
     start: Option<Instant>,
     end: Option<Instant>,
 }
@@ -35,9 +34,6 @@ fn main() -> io::Result<()> {
     let mut terminal = Terminal::new(CrosstermBackend::new(stdout()))?;
 
     let mut test = Test::new();
-    for word in test.words.iter_mut() {
-        word.gen_spans();
-    }
 
     let mut should_quit = false;
     while !should_quit {
@@ -52,14 +48,18 @@ fn main() -> io::Result<()> {
 
 impl Word<'_> {
     fn new(word: String, info: Option<String>) -> Self {
-        Self {
+        let mut out = Self {
             target: word,
-            info: None,
+            info,
             input: String::new(),
             spans: Vec::new(),
             start: None,
             end: None,
-        }
+        };
+
+        out.gen_spans();
+
+        out
     }
 
     fn push(&mut self, c: char) -> bool {
@@ -74,25 +74,38 @@ impl Word<'_> {
 
         self.input.push(c);
 
+        self.gen_spans();
+
         false
     }
 
     fn delete(&mut self) -> bool {
-        self.input.pop().is_none()
+        let res = self.input.pop().is_none();
+        self.gen_spans();
+
+        res
     }
 
     fn gen_spans(&mut self) {
-        if self.target == self.input {
-            self.spans.push(Span::styled(
-                self.target.clone() + " ",
-                Style::new().fg(Color::White),
-            ));
-        } else {
-            self.spans.push(Span::styled(
-                self.target.clone() + " ",
-                Style::new().fg(Color::Red),
-            ));
+        self.spans.clear();
+        let mut target = self.target.chars();
+        let mut input = self.input.chars();
+
+        loop {
+            self.spans.push(match (target.next(), input.next()) {
+                (Some(t), Some(i)) if t == i => {
+                    Span::styled(t.to_string(), Style::new().fg(Color::White))
+                }
+                (Some(t), Some(i)) if t != i => {
+                    Span::styled(t.to_string(), Style::new().fg(Color::White).bg(Color::Red))
+                }
+                (Some(_), None) => Span::styled("_", Style::new().fg(Color::DarkGray)),
+                (None, Some(i)) => Span::styled(i.to_string(), Style::new().fg(Color::Yellow)),
+                _ => break,
+            })
         }
+
+        self.spans.push(Span::raw(" "));
     }
 }
 
@@ -101,32 +114,53 @@ impl Test<'_> {
         Self {
             words: Self::generate_words(64),
             index: 0,
-            rng: rand::thread_rng(),
             start: None,
             end: None,
         }
     }
 
     fn generate_words(n: usize) -> Vec<Word<'static>> {
-        include_str!("../res/words.toml")
+        let mut rng = rand::thread_rng();
+
+        let mut words = include_str!("../res/words.toml")
             .parse::<Table>()
             .unwrap()
             .iter()
             .filter_map(|word| {
                 if let Some(toml::Value::Table(translations)) = word.1.get("pu_verbatim") {
                     if let Some(toml::Value::String(description)) = translations.get("en") {
-                        return Some(Word::new(word.0.to_string(), Some(description.to_string())));
+                        return Some(Word::new(
+                            word.0.to_string(),
+                            Some(
+                                description
+                                    .split('\n')
+                                    .map(|str| "[".to_string() + str + "] ")
+                                    .collect::<String>(),
+                            ),
+                        ));
                     }
                 }
                 None
             })
-            .choose_multiple(&mut rand::thread_rng(), n)
+            .choose_multiple(&mut rng, n);
+
+        words.shuffle(&mut rng);
+
+        words
     }
 
     fn push(&mut self, c: char) {
         if let Some(word) = self.words.get_mut(self.index) {
             if word.push(c) {
                 self.index += 1;
+
+                if self.end.is_none() && self.words.get(self.index).is_none() {
+                    self.end = Some(Instant::now());
+                }
+            } else {
+                if self.start.is_none() {
+                    self.start = Some(Instant::now());
+                }
             }
         }
     }
@@ -134,7 +168,9 @@ impl Test<'_> {
     fn delete(&mut self) {
         if let Some(word) = self.words.get_mut(self.index) {
             if word.delete() {
-                self.index -= 1;
+                if let Some(index) = self.index.checked_sub(1) {
+                    self.index = index;
+                }
             }
         }
     }
@@ -152,16 +188,58 @@ impl Test<'_> {
 
 fn handle_events(test: &mut Test) -> io::Result<bool> {
     if event::poll(std::time::Duration::from_millis(50))? {
-        if let Event::Key(key) = event::read()? {
-            if key.kind == event::KeyEventKind::Press && key.code == KeyCode::Char('q') {
-                return Ok(true);
-            }
+        match event::read()? {
+            Event::Key(KeyEvent {
+                modifiers: KeyModifiers::CONTROL,
+                code: KeyCode::Char('c'),
+                ..
+            }) => return Ok(true),
+            Event::Key(KeyEvent {
+                modifiers: KeyModifiers::CONTROL,
+                code: KeyCode::Char('r'),
+                ..
+            }) => *test = Test::new(),
+            Event::Key(key) if key.kind == event::KeyEventKind::Press => match key.code {
+                KeyCode::Backspace => test.delete(),
+                KeyCode::Char(c) => test.push(c),
+                _ => (),
+            },
+            _ => (),
         }
     }
     Ok(false)
 }
 
 fn ui(frame: &mut Frame, test: &mut Test) {
+    let layout = Layout::vertical([
+        Constraint::Percentage(30),
+        Constraint::Fill(1),
+        Constraint::Length(3),
+    ])
+    .split(frame.size());
+
+    // definition
+    frame.render_widget(
+        Paragraph::new(Span::styled(
+            match test.words.get(test.index) {
+                Some(word) => word.info.clone().unwrap_or_default(),
+                _ => "".to_string(),
+            },
+            Style::new(),
+        ))
+        .block(Block::default().padding(Padding {
+            top: 1,
+            left: 8,
+            right: 8,
+            bottom: 0,
+        }))
+        .centered()
+        .bg(Color::Rgb(0, 20, 20))
+        .wrap(Wrap { trim: true }),
+        layout[0],
+    );
+
+    // test words
     frame.render_widget(
         Paragraph::new(test.get_text())
             .block(Block::default().padding(Padding {
@@ -170,7 +248,29 @@ fn ui(frame: &mut Frame, test: &mut Test) {
                 top: 1,
                 bottom: 1,
             }))
+            .bg(Color::Rgb(0, 10, 10))
             .wrap(Wrap { trim: true }),
-        frame.size(),
+        layout[1],
     );
+
+    // test status/information
+    frame.render_widget(
+        Paragraph::new(Span::raw(match (test.start, test.end) {
+            (None, None) => "Test has not started".into(),
+            (None, Some(_)) => {
+                "What did you do? It appears you ended the test without starting".into()
+            }
+            (Some(start), None) => format!(
+                "{} words per minute",
+                (60.0 * (test.index + 1) as f32 / start.elapsed().as_secs_f32()).round()
+            ),
+            (Some(start), Some(end)) => format!(
+                "Test finished: {} words per minute",
+                (60.0 * test.words.len() as f32 / end.duration_since(start).as_secs_f32()).round()
+            ),
+        }))
+        .centered()
+        .bg(Color::Rgb(0, 10, 10)),
+        layout[2],
+    )
 }
