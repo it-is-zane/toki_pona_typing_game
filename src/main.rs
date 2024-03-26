@@ -1,13 +1,13 @@
+use bzip2::bufread::BzDecoder;
 use crossterm::{
     event::{self, Event, KeyCode, KeyEvent, KeyModifiers},
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };
-use rand::seq::IteratorRandom;
-use rand::seq::SliceRandom;
+use rand::seq::{IteratorRandom, SliceRandom};
 use ratatui::{layout::Layout, prelude::*, text::Line, widgets::*};
 use std::{
-    io::{self, stdout},
+    io::{self, stdout, Read},
     time::Instant,
 };
 use toml::Table;
@@ -122,19 +122,40 @@ impl Test<'_> {
     fn generate_words(n: usize) -> Vec<Word<'static>> {
         let mut rng = rand::thread_rng();
 
-        let mut words = include_str!("../res/words.toml")
+        // get words from compressed toml file
+        let mut toml = String::new();
+        let mut decompressor = BzDecoder::new(include_bytes!("../res/words.toml.bz2").as_slice());
+        decompressor.read_to_string(&mut toml).unwrap();
+
+        // create word vec
+        let mut words = toml
             .parse::<Table>()
             .unwrap()
             .iter()
             .filter_map(|word| {
+                let mut rng = rand::thread_rng();
                 if let Some(toml::Value::Table(translations)) = word.1.get("pu_verbatim") {
                     if let Some(toml::Value::String(description)) = translations.get("en") {
                         return Some(Word::new(
+                            // return word, Some(example)
                             word.0.to_string(),
                             Some(
                                 description
                                     .split('\n')
-                                    .map(|str| "[".to_string() + str + "] ")
+                                    .map(|str| {
+                                        let mut part = str.split(' ');
+                                        "[".to_string()
+                                            + part.next().unwrap_or_default().trim()
+                                            + " " // put a space between part of speech and example
+                                            + part
+                                                .map(|ex| " ".to_string() + ex) // re-insert spaces
+                                                .collect::<String>() // merge examples
+                                                .split(',') // separate examples by commas
+                                                .map(|ex| ex.trim())
+                                                .choose(&mut rng) // choose a random example
+                                                .unwrap_or_default()
+                                            + "]\n "
+                                    })
                                     .collect::<String>(),
                             ),
                         ));
@@ -142,9 +163,9 @@ impl Test<'_> {
                 }
                 None
             })
-            .choose_multiple(&mut rng, n);
+            .choose_multiple(&mut rng, n); // chose n words for the test
 
-        words.shuffle(&mut rng);
+        words.shuffle(&mut rng); // randomize the order of the words
 
         words
     }
@@ -181,6 +202,7 @@ impl Test<'_> {
         for word in self.words.iter() {
             spans.append(&mut word.spans.clone());
         }
+        spans.push(Span::raw("pini"));
 
         Text::from(Line::from(spans))
     }
@@ -214,19 +236,16 @@ fn ui(frame: &mut Frame, test: &mut Test) {
     let layout = Layout::vertical([
         Constraint::Percentage(30),
         Constraint::Fill(1),
-        Constraint::Length(3),
+        Constraint::Length(4),
     ])
     .split(frame.size());
 
     // definition
     frame.render_widget(
-        Paragraph::new(Span::styled(
-            match test.words.get(test.index) {
-                Some(word) => word.info.clone().unwrap_or_default(),
-                _ => "".to_string(),
-            },
-            Style::new(),
-        ))
+        Paragraph::new(Text::from(match test.words.get(test.index) {
+            Some(word) => word.info.clone().unwrap_or_default(),
+            _ => "".to_string(),
+        }))
         .block(Block::default().padding(Padding {
             top: 1,
             left: 8,
@@ -255,20 +274,23 @@ fn ui(frame: &mut Frame, test: &mut Test) {
 
     // test status/information
     frame.render_widget(
-        Paragraph::new(Span::raw(match (test.start, test.end) {
-            (None, None) => "Test has not started".into(),
-            (None, Some(_)) => {
-                "What did you do? It appears you ended the test without starting".into()
-            }
-            (Some(start), None) => format!(
-                "{} words per minute",
-                (60.0 * (test.index + 1) as f32 / start.elapsed().as_secs_f32()).round()
-            ),
-            (Some(start), Some(end)) => format!(
-                "Test finished: {} words per minute",
-                (60.0 * test.words.len() as f32 / end.duration_since(start).as_secs_f32()).round()
-            ),
-        }))
+        Paragraph::new(Text::from(
+            match (test.start, test.end) {
+                (None, None) => "Test has not started".into(),
+                (None, Some(_)) => {
+                    "What did you do? It appears you ended the test without starting".into()
+                }
+                (Some(start), None) => format!(
+                    "{} words per minute",
+                    (60.0 * (test.index + 1) as f32 / start.elapsed().as_secs_f32()).round()
+                ),
+                (Some(start), Some(end)) => format!(
+                    "Test finished: {} words per minute",
+                    (60.0 * test.words.len() as f32 / end.duration_since(start).as_secs_f32())
+                        .round()
+                ),
+            } + "\nctrl+c quit\nctrl+r restart",
+        ))
         .centered()
         .bg(Color::Rgb(0, 10, 10)),
         layout[2],
