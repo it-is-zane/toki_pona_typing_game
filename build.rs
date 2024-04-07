@@ -2,14 +2,53 @@ use std::collections::HashMap;
 use toml::Table;
 
 fn main() {
+    // get extra information from commentary.toml definitions.toml sp_etymology.toml etymology.toml
+    let information = std::fs::read_dir("./res/sona/words/source/")
+        .unwrap()
+        .filter_map(|dir_entry| dir_entry.ok())
+        .map(|dir_entry| {
+            (
+                dir_entry.file_name().to_str().unwrap().to_string(),
+                dir_entry.path(),
+            )
+        })
+        .filter_map(
+            |(file_name, path)| match std::fs::read_to_string(path).ok() {
+                Some(data) => Some((file_name, data)),
+                None => None,
+            },
+        )
+        .filter_map(|(file_name, data)| match data.parse::<Table>().ok() {
+            Some(table) => Some((file_name, table)),
+            None => None,
+        })
+        .collect::<HashMap<String, Table>>();
+
     // collect all words and compile them into a Table
-    let words = std::fs::read_dir("./res/sona-0.2.3/words/metadata/")
+    let words = std::fs::read_dir("./res/sona/words/metadata/")
         .unwrap()
         .filter_map(|dir_entry| dir_entry.ok())
         .map(|dir_entry| dir_entry.path())
         .filter_map(|path| std::fs::read_to_string(path).ok())
         .filter_map(|data| data.parse::<Table>().ok())
         .map(|table| (table["id"].to_owned().to_string().replace("\"", ""), table))
+        .map(|(word, mut table)| {
+            eprintln!("{:?}", information.keys());
+
+            let definition = information.get("definitions.toml").unwrap();
+            let commentary = information.get("commentary.toml").unwrap();
+
+            table.insert(
+                "definition".into(),
+                definition.get(&word).unwrap().to_owned().into(),
+            );
+            table.insert(
+                "commentary".into(),
+                commentary.get(&word).unwrap().to_owned(),
+            );
+
+            (word, table)
+        })
         .collect::<HashMap<String, Table>>();
 
     // convert Table to toml
