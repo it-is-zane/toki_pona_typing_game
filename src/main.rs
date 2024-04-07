@@ -133,33 +133,22 @@ impl Test<'_> {
             .unwrap()
             .iter()
             .filter_map(|word| {
-                let mut rng = rand::thread_rng();
-                if let Some(toml::Value::Table(translations)) = word.1.get("pu_verbatim") {
-                    if let Some(toml::Value::String(description)) = translations.get("en") {
-                        return Some(Word::new(
-                            // return word, Some(example)
-                            word.0.to_string(),
-                            Some(
-                                description
-                                    .split('\n')
-                                    .map(|str| {
-                                        let mut part = str.split(' ');
-                                        "[".to_string()
-                                            + part.next().unwrap_or_default().trim()
-                                            + " " // put a space between part of speech and example
-                                            + part
-                                                .map(|ex| " ".to_string() + ex) // re-insert spaces
-                                                .collect::<String>() // merge examples
-                                                .split(',') // separate examples by commas
-                                                .map(|ex| ex.trim())
-                                                .choose(&mut rng) // choose a random example
-                                                .unwrap_or_default()
-                                            + "]\n "
-                                    })
-                                    .collect::<String>(),
-                            ),
-                        ));
-                    }
+                if let Some(toml::Value::Boolean(true)) = word.1.get("deprecated") {
+                    return None;
+                }
+                let category = match word.1.get("usage_category") {
+                    Some(toml::Value::String(category)) => match category.as_str() {
+                        "core" | "common" => category,
+                        _ => return None,
+                    },
+                    _ => return None,
+                };
+
+                if let Some(toml::Value::String(definition)) = word.1.get("definition") {
+                    return Some(Word::new(
+                        word.0.to_string(),
+                        Some(definition.to_string() + "\n" + category),
+                    ));
                 }
                 None
             })
