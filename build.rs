@@ -59,10 +59,10 @@ fn main() {
         }
     };
 
-    /* let path = "res/words.toml";
-    if std::fs::write(path, words_toml).is_err() {
+    let path = "res/words.toml";
+    if std::fs::write(path, &words_toml).is_err() {
         panic!("failed to save file {path}");
-    } */
+    }
 
     // compress file with bzip2
     let compressor = bzip2::read::BzEncoder::new(words_toml.as_bytes(), bzip2::Compression::best());
