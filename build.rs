@@ -3,7 +3,7 @@ use toml::Table;
 
 fn main() {
     // get extra information from commentary.toml definitions.toml sp_etymology.toml etymology.toml
-    let information = std::fs::read_dir("./res/sona/words/source/")
+    let information = std::fs::read_dir("src/res/sona/words/source/")
         .unwrap()
         .filter_map(|dir_entry| dir_entry.ok())
         .map(|dir_entry| {
@@ -12,20 +12,16 @@ fn main() {
                 dir_entry.path(),
             )
         })
-        .filter_map(
-            |(file_name, path)| match std::fs::read_to_string(path).ok() {
-                Some(data) => Some((file_name, data)),
-                None => None,
-            },
-        )
-        .filter_map(|(file_name, data)| match data.parse::<Table>().ok() {
-            Some(table) => Some((file_name, table)),
-            None => None,
+        .filter_map(|(file_name, path)| {
+            std::fs::read_to_string(path)
+                .ok()
+                .map(|data| (file_name, data))
         })
+        .filter_map(|(file_name, data)| data.parse::<Table>().ok().map(|table| (file_name, table)))
         .collect::<HashMap<String, Table>>();
 
     // collect all words and compile them into a Table
-    let words = std::fs::read_dir("./res/sona/words/metadata/")
+    let words = std::fs::read_dir("src/res/sona/words/metadata/")
         .unwrap()
         .filter_map(|dir_entry| dir_entry.ok())
         .map(|dir_entry| dir_entry.path())
@@ -59,7 +55,7 @@ fn main() {
         }
     };
 
-    let path = "res/words.toml";
+    let path = "src/res/words.toml";
     if std::fs::write(path, &words_toml).is_err() {
         panic!("failed to save file {path}");
     }
@@ -70,7 +66,7 @@ fn main() {
         .map(|x| x.unwrap()) // not sure why this is a result
         .collect();
 
-    let path = "res/words.toml.bz2";
+    let path = "src/res/words.toml.bz2";
     if std::fs::write(path, words_toml_bz2).is_err() {
         panic!("failed to save file {path}");
     }

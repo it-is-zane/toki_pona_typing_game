@@ -1,287 +1,395 @@
-use bzip2::bufread::BzDecoder;
-use crossterm::{
-    event::{self, Event, KeyCode, KeyEvent, KeyModifiers},
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
-    ExecutableCommand,
+#![allow(unused)]
+#![warn(clippy::all, clippy::pedantic, clippy::nursery)]
+
+use rand::{rngs::ThreadRng, seq::SliceRandom};
+use ratatui::{
+    crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers},
+    layout::{
+        Constraint,
+        Direction::{Horizontal, Vertical},
+        Layout,
+    },
+    style::{Color, Modifier, Style, Styled, Stylize},
+    text::{Line, Span, Text},
+    widgets::{Block, BorderType::Rounded, Paragraph, Wrap},
 };
-use rand::seq::{IteratorRandom, SliceRandom};
-use ratatui::{layout::Layout, prelude::*, text::Line, widgets::*};
 use std::{
-    io::{self, stdout, Read},
-    time::Instant,
+    collections::HashMap,
+    io::{Read, Write},
+    ops::SubAssign,
+    str::Chars,
+    sync::LazyLock,
+    time::{Instant, SystemTime},
 };
-use toml::Table;
 
-struct Word<'a> {
-    target: String,
-    info: Option<String>, // e.g. Definition
-    input: String,
-    spans: Vec<Span<'a>>,
-    start: Option<Instant>,
-    end: Option<Instant>,
+const APPLICATION: &str = "tt";
+
+#[cfg(not(feature = "compressed"))]
+static WORDS: LazyLock<HashMap<String, toml::Table>> = LazyLock::new(|| {
+    toml::from_str(include_str!("res/words.toml")).expect("failed to parse words.toml")
+});
+
+#[cfg(feature = "compressed")]
+static WORDS: LazyLock<HashMap<String, toml::Table>> = LazyLock::new(|| {
+    let bz2 = include_bytes!("res/words.toml.bz2").as_slice();
+    let mut toml = String::new();
+    let mut decompressor = bzip2::read::BzDecoder::new(bz2);
+
+    decompressor
+        .read_to_string(&mut toml)
+        .expect("failed to decompress words");
+
+    toml::from_str(&toml).expect("failed to parse words.toml")
+});
+
+#[derive(serde::Deserialize, serde::Serialize)]
+struct WordResults {}
+
+enum GameSpan<T> {
+    Correct(T),
+    Wrong(T),
+    Overflow(T),
+    Skipped(T),
+    Hidden(T),
 }
 
-struct Test<'a> {
-    words: Vec<Word<'a>>,
-    index: usize,
-    start: Option<Instant>,
-    end: Option<Instant>,
-}
-
-fn main() -> io::Result<()> {
-    enable_raw_mode()?;
-    stdout().execute(EnterAlternateScreen)?;
-    let mut terminal = Terminal::new(CrosstermBackend::new(stdout()))?;
-
-    let mut test = Test::new();
-
-    let mut should_quit = false;
-    while !should_quit {
-        terminal.draw(|frame| ui(frame, &mut test))?;
-        should_quit = handle_events(&mut test)?;
+impl<T> GameSpan<T> {
+    fn map<T2, F: Fn(&T) -> T2>(&self, f: F) -> GameSpan<T2> {
+        match self {
+            Self::Correct(v) => GameSpan::Correct(f(v)),
+            Self::Wrong(v) => GameSpan::Wrong(f(v)),
+            Self::Overflow(v) => GameSpan::Overflow(f(v)),
+            Self::Skipped(v) => GameSpan::Skipped(f(v)),
+            Self::Hidden(v) => GameSpan::Hidden(f(v)),
+        }
     }
-
-    disable_raw_mode()?;
-    stdout().execute(LeaveAlternateScreen)?;
-    Ok(())
 }
 
-impl Word<'_> {
-    fn new(word: String, info: Option<String>) -> Self {
-        let mut out = Self {
-            target: word,
-            info,
+struct GameSettings<T> {
+    core: T,
+    common: T,
+    uncommon: T,
+    obscure: T,
+    sandbox: T,
+    deprecated: T,
+    nondeprecated: T,
+    words: HashMap<String, T>,
+    len: usize,
+}
+
+impl GameSettings<usize> {
+    const DEFAULT: usize = 1000;
+
+    fn get_word(&self, word: &str) -> usize {
+        *self.words.get(word).unwrap_or(&Self::DEFAULT)
+    }
+}
+
+impl Default for GameSettings<usize> {
+    fn default() -> Self {
+        Self {
+            core: Self::DEFAULT,
+            common: Self::DEFAULT * 200,
+            uncommon: Self::DEFAULT * 400,
+            obscure: Self::DEFAULT * 600,
+            sandbox: Self::DEFAULT * 800,
+            deprecated: Self::DEFAULT * 800,
+            nondeprecated: Self::DEFAULT,
+            words: HashMap::new(),
+            len: 60,
+        }
+    }
+}
+
+struct Game<K> {
+    words: Vec<&'static toml::map::Map<String, toml::Value>>,
+    key_log: Vec<(K, Instant)>,
+    target: String,
+    input: String,
+    spans: Vec<GameSpan<String>>,
+}
+
+impl Game<KeyCode> {
+    fn new(settings: &GameSettings<usize>) -> Self {
+        let mut words: Vec<_> = WORDS.values().collect();
+
+        words.sort_by_cached_key(|toml| {
+            let category_weight = toml
+                .get("usage_category")
+                .and_then(toml::Value::as_str)
+                .map(|cat| match cat {
+                    "core" => settings.core,
+                    "common" => settings.common,
+                    "uncommon" => settings.uncommon,
+                    "obscure" => settings.obscure,
+                    "sandbox" => settings.sandbox,
+                    _ => todo!(),
+                })
+                .expect("failed to get category");
+
+            let deprecated_weight = toml
+                .get("deprecated")
+                .and_then(toml::Value::as_bool)
+                .map(|b| {
+                    if b {
+                        settings.deprecated
+                    } else {
+                        settings.nondeprecated
+                    }
+                })
+                .expect("failed to get deprecation");
+
+            let word_weight = settings.get_word(
+                toml.get("word")
+                    .and_then(toml::Value::as_str)
+                    .expect("failed to get word field"),
+            );
+
+            category_weight * deprecated_weight * word_weight * rand::random_range(900..1100)
+        });
+
+        words.truncate(settings.len);
+
+        let mut target = String::new();
+        let mut iter = words
+            .iter()
+            .filter_map(|word| word.get("word"))
+            .filter_map(toml::Value::as_str);
+
+        target.push_str(iter.next().expect("words list was empty"));
+        for word in iter {
+            target.push(' ');
+            target.push_str(word);
+        }
+
+        Self {
+            words,
+            key_log: Vec::new(),
+            target: target.clone(),
             input: String::new(),
             spans: Vec::new(),
-            start: None,
-            end: None,
-        };
-
-        out.gen_spans();
-
-        out
-    }
-
-    fn push(&mut self, c: char) -> bool {
-        if self.input.is_empty() {
-            self.start = Some(Instant::now());
-        }
-
-        if c == ' ' {
-            self.end = Some(Instant::now());
-            return true;
-        }
-
-        self.input.push(c);
-
-        self.gen_spans();
-
-        false
-    }
-
-    fn delete(&mut self) -> bool {
-        let res = self.input.pop().is_none();
-        self.gen_spans();
-
-        res
-    }
-
-    fn gen_spans(&mut self) {
-        self.spans.clear();
-        let mut target = self.target.chars();
-        let mut input = self.input.chars();
-
-        loop {
-            self.spans.push(match (target.next(), input.next()) {
-                (Some(t), Some(i)) if t == i => {
-                    Span::styled(t.to_string(), Style::new().fg(Color::White))
-                }
-                (Some(t), Some(i)) if t != i => {
-                    Span::styled(t.to_string(), Style::new().fg(Color::White).bg(Color::Red))
-                }
-                (Some(_), None) => Span::styled("_", Style::new().fg(Color::DarkGray)),
-                (None, Some(i)) => Span::styled(i.to_string(), Style::new().fg(Color::Yellow)),
-                _ => break,
-            })
-        }
-
-        self.spans.push(Span::raw(" "));
-    }
-}
-
-impl Test<'_> {
-    fn new() -> Self {
-        Self {
-            words: Self::generate_words(64),
-            index: 0,
-            start: None,
-            end: None,
         }
     }
 
-    fn generate_words(n: usize) -> Vec<Word<'static>> {
-        let mut rng = rand::thread_rng();
-
-        // get words from compressed toml file
-        let mut toml = String::new();
-        let mut decompressor = BzDecoder::new(include_bytes!("../res/words.toml.bz2").as_slice());
-        decompressor.read_to_string(&mut toml).unwrap();
-
-        // create word vec
-        let mut words = toml
-            .parse::<Table>()
-            .unwrap()
-            .iter()
-            .filter_map(|word| {
-                if let Some(toml::Value::Boolean(true)) = word.1.get("deprecated") {
-                    return None;
-                }
-                let category = match word.1.get("usage_category") {
-                    Some(toml::Value::String(category)) => match category.as_str() {
-                        "core" | "common" => category,
-                        _ => return None,
-                    },
-                    _ => return None,
-                };
-
-                if let Some(toml::Value::String(definition)) = word.1.get("definition") {
-                    return Some(Word::new(
-                        word.0.to_string(),
-                        Some(definition.to_string() + "\n" + category),
-                    ));
-                }
-                None
-            })
-            .choose_multiple(&mut rng, n); // chose n words for the test
-
-        words.shuffle(&mut rng); // randomize the order of the words
-
-        words
-    }
-
-    fn push(&mut self, c: char) {
-        if let Some(word) = self.words.get_mut(self.index) {
-            if word.push(c) {
-                self.index += 1;
-
-                if self.end.is_none() && self.words.get(self.index).is_none() {
-                    self.end = Some(Instant::now());
-                }
-            } else {
-                if self.start.is_none() {
-                    self.start = Some(Instant::now());
-                }
-            }
-        }
-    }
-
-    fn delete(&mut self) {
-        if let Some(word) = self.words.get_mut(self.index) {
-            if word.delete() {
-                if let Some(index) = self.index.checked_sub(1) {
-                    self.index = index;
-                }
-            }
-        }
-    }
-
-    fn get_text(&mut self) -> Text {
+    fn calculate_spans(&mut self) {
         let mut spans = Vec::new();
 
-        for word in self.words.iter() {
-            spans.append(&mut word.spans.clone());
-        }
-        spans.push(Span::raw("pini"));
+        let mut targ = self.target.chars().peekable();
+        let mut inpt = self.input.chars().peekable();
 
-        Text::from(Line::from(spans))
-    }
-}
-
-fn handle_events(test: &mut Test) -> io::Result<bool> {
-    if event::poll(std::time::Duration::from_millis(50))? {
-        match event::read()? {
-            Event::Key(KeyEvent {
-                modifiers: KeyModifiers::CONTROL,
-                code: KeyCode::Char('c'),
-                ..
-            }) => return Ok(true),
-            Event::Key(KeyEvent {
-                modifiers: KeyModifiers::CONTROL,
-                code: KeyCode::Char('r'),
-                ..
-            }) => *test = Test::new(),
-            Event::Key(key) if key.kind == event::KeyEventKind::Press => match key.code {
-                KeyCode::Backspace => test.delete(),
-                KeyCode::Char(c) => test.push(c),
-                _ => (),
-            },
-            _ => (),
-        }
-    }
-    Ok(false)
-}
-
-fn ui(frame: &mut Frame, test: &mut Test) {
-    let layout = Layout::vertical([
-        Constraint::Percentage(30),
-        Constraint::Fill(1),
-        Constraint::Length(4),
-    ])
-    .split(frame.size());
-
-    // definition
-    frame.render_widget(
-        Paragraph::new(Text::from(match test.words.get(test.index) {
-            Some(word) => word.info.clone().unwrap_or_default(),
-            _ => "".to_string(),
-        }))
-        .block(Block::default().padding(Padding {
-            top: 1,
-            left: 8,
-            right: 8,
-            bottom: 0,
-        }))
-        .centered()
-        .bg(Color::Rgb(0, 20, 20))
-        .wrap(Wrap { trim: true }),
-        layout[0],
-    );
-
-    // test words
-    frame.render_widget(
-        Paragraph::new(test.get_text())
-            .block(Block::default().padding(Padding {
-                left: 2,
-                right: 2,
-                top: 1,
-                bottom: 1,
-            }))
-            .bg(Color::Rgb(0, 10, 10))
-            .wrap(Wrap { trim: true }),
-        layout[1],
-    );
-
-    // test status/information
-    frame.render_widget(
-        Paragraph::new(Text::from(
-            match (test.start, test.end) {
-                (None, None) => "Test has not started".into(),
-                (None, Some(_)) => {
-                    "What did you do? It appears you ended the test without starting".into()
+        loop {
+            match (targ.peek(), inpt.peek()) {
+                (Some(t), Some(i)) if t == i => {
+                    spans.push(GameSpan::Correct(*t));
+                    targ.next();
+                    inpt.next();
                 }
-                (Some(start), None) => format!(
-                    "{} words per minute",
-                    (60.0 * (test.index + 1) as f32 / start.elapsed().as_secs_f32()).round()
-                ),
-                (Some(start), Some(end)) => format!(
-                    "Test finished: {} words per minute",
-                    (60.0 * test.words.len() as f32 / end.duration_since(start).as_secs_f32())
-                        .round()
-                ),
-            } + "\nctrl+c quit\nctrl+r restart",
-        ))
-        .centered()
-        .bg(Color::Rgb(0, 10, 10)),
-        layout[2],
-    )
+                (Some(t), Some(' ')) => {
+                    spans.push(GameSpan::Skipped(*t));
+                    targ.next();
+                }
+                (Some(' ') | None, Some(i)) => {
+                    spans.push(GameSpan::Overflow(*i));
+                    inpt.next();
+                }
+                (Some(t), Some(i)) => {
+                    spans.push(GameSpan::Wrong(*t));
+                    targ.next();
+                    inpt.next();
+                }
+                (Some(t), None) => {
+                    spans.push(GameSpan::Hidden(if *t == ' ' { ' ' } else { '_' }));
+                    targ.next();
+                }
+                _ => break,
+            }
+        }
+
+        let mut spans = spans.iter().peekable();
+        self.spans.clear();
+
+        loop {
+            match (self.spans.last_mut(), spans.peek()) {
+                (Some(GameSpan::Correct(s_span)), Some(GameSpan::Correct(c_span)))
+                | (Some(GameSpan::Wrong(s_span)), Some(GameSpan::Wrong(c_span)))
+                | (Some(GameSpan::Overflow(s_span)), Some(GameSpan::Overflow(c_span)))
+                | (Some(GameSpan::Skipped(s_span)), Some(GameSpan::Skipped(c_span)))
+                | (Some(GameSpan::Hidden(s_span)), Some(GameSpan::Hidden(c_span))) => {
+                    s_span.push(*c_span);
+                    spans.next();
+                }
+                (_, Some(c_span)) => {
+                    self.spans
+                        .push(c_span.map(std::string::ToString::to_string));
+                    spans.next();
+                }
+                _ => break,
+            }
+        }
+    }
+
+    fn crossterm_event(&mut self, event: &Event) {
+        if let Event::Key(
+            KeyEvent {
+                code: KeyCode::Esc, ..
+            }
+            | KeyEvent {
+                code: KeyCode::Char('c' | 'd'),
+                modifiers: KeyModifiers::CONTROL,
+                ..
+            },
+        ) = event
+        {
+            std::process::exit(0);
+        }
+
+        if let Event::Key(key_event) = event {
+            self.key_log.push((key_event.code, Instant::now()));
+
+            match key_event.code {
+                KeyCode::Char(c) => self.input.push(c),
+                KeyCode::Backspace => _ = self.input.pop(),
+                _ => (),
+            }
+        }
+
+        self.calculate_spans();
+    }
+
+    fn draw_game_ratatui<B: ratatui::backend::Backend>(&self, terminal: &mut ratatui::Terminal<B>) {
+        const CORRECT: Style = Style::new().fg(Color::Green);
+
+        const WRONG: Style = Style::new()
+            .fg(Color::Red)
+            .add_modifier(Modifier::UNDERLINED)
+            .add_modifier(Modifier::BOLD);
+
+        const OVERFLOW: Style = Style::new().fg(Color::Yellow);
+
+        const SKIPPED: Style = Style::new().fg(Color::LightRed);
+
+        const HIDDEN: Style = Style::new();
+
+        let current_index = self.input.chars().filter(|c| *c == ' ').count();
+        let mut words = self.target.split_whitespace();
+
+        let word_1 = if self.input.ends_with(' ') {
+            words.nth(current_index)
+        } else {
+            words.nth(current_index.checked_sub(1).unwrap_or_default())
+        };
+
+        let word_2 = words.next();
+
+        terminal
+            .draw(|frame| {
+                let [top, main] = Layout::new(Vertical, [Constraint::Fill(1), Constraint::Fill(3)])
+                    .areas(frame.area());
+                let [top_l, top_r] =
+                    Layout::new(Horizontal, [Constraint::Fill(1), Constraint::Fill(1)]).areas(top);
+
+                let ratatui_spans = self.spans.iter().map(|span| match span {
+                    GameSpan::Correct(line) => Span::styled(line, CORRECT),
+                    GameSpan::Wrong(line) => Span::styled(line, WRONG),
+                    GameSpan::Overflow(line) => Span::styled(line, OVERFLOW),
+                    GameSpan::Skipped(line) => Span::styled(line, SKIPPED),
+                    GameSpan::Hidden(line) => Span::styled(line, HIDDEN),
+                });
+
+                for (word, area) in [(word_1, top_l), (word_2, top_r)] {
+                    if let Some(toml) = word.and_then(|w| WORDS.get(w)) {
+                        frame.render_widget(
+                            Paragraph::new(
+                                [
+                                    toml.get("definition")
+                                        .map(toml::Value::to_string)
+                                        .map(|s| "DEFINITION ".to_string() + s.trim_matches('\"')),
+                                    Some(String::new()),
+                                    toml.get("pu_verbatim")
+                                        .and_then(|value| value.get("en"))
+                                        .map(toml::Value::to_string)
+                                        .map(|s| s.trim_matches('\"').to_string()),
+                                    Some(String::new()),
+                                    toml.get("ku_data").and_then(|value| value.as_table()).map(
+                                        |table| {
+                                            table.keys().fold("KU DATA".to_string(), |mut s, k| {
+                                                s.push(' ');
+                                                s.push_str(k);
+                                                s
+                                            })
+                                        },
+                                    ),
+                                ]
+                                .iter()
+                                .flatten()
+                                .map(Line::raw)
+                                .collect::<Text>(),
+                            )
+                            .wrap(Wrap { trim: false })
+                            .block(Block::bordered()),
+                            area,
+                        );
+                    }
+                }
+
+                frame.render_widget(
+                    Paragraph::new(ratatui_spans.collect::<Line>()).wrap(Wrap::default()),
+                    main,
+                );
+            })
+            .expect("failed to draw frame");
+    }
+}
+
+fn main() {
+    let mut terminal = ratatui::init();
+
+    ratatui::crossterm::execute!(
+        terminal.backend_mut(),
+        ratatui::crossterm::event::EnableMouseCapture
+    );
+
+    // get user history
+    // let history_path = directories::ProjectDirs::from("", "", APPLICATION)
+    //     .map(|base_dirs| {
+    //         if !base_dirs.config_dir().exists() {
+    //             std::fs::create_dir_all(base_dirs.config_dir());
+    //         }
+
+    //         base_dirs.config_dir().to_path_buf()
+    //     })
+    //     .unwrap()
+    //     .join("config.toml");
+
+    // parse user profile
+    // let history: std::collections::HashMap<String, Vec<WordResults>> =
+    //     std::fs::read_to_string(&history_path)
+    //         .map(|data| toml::from_str(&data).ok())
+    //         .ok()
+    //         .flatten()
+    //         .unwrap();
+
+    // initialization
+    let mut game: Game<KeyCode> = Game::new(&GameSettings::default());
+
+    // game
+    loop {
+        let event = ratatui::crossterm::event::read().expect("failed to read event");
+        game.crossterm_event(&event);
+        game.draw_game_ratatui(&mut terminal);
+    }
+
+    // results
+
+    // write user data to file
+    // std::fs::File::create(&history_path)
+    //     .unwrap()
+    //     .write(toml::to_string(&history).unwrap().as_bytes());
+
+    ratatui::crossterm::execute!(
+        terminal.backend_mut(),
+        ratatui::crossterm::event::DisableMouseCapture
+    );
+
+    ratatui::restore();
 }
