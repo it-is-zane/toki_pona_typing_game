@@ -229,20 +229,6 @@ impl Game<KeyCode> {
     }
 
     fn crossterm_event(&mut self, event: &Event) {
-        if let Event::Key(
-            KeyEvent {
-                code: KeyCode::Esc, ..
-            }
-            | KeyEvent {
-                code: KeyCode::Char('c' | 'd'),
-                modifiers: KeyModifiers::CONTROL,
-                ..
-            },
-        ) = event
-        {
-            std::process::exit(0);
-        }
-
         if let Event::Key(key_event) = event {
             self.key_log.push((key_event.code, Instant::now()));
 
@@ -375,6 +361,21 @@ fn main() {
     // game
     loop {
         let event = ratatui::crossterm::event::read().expect("failed to read event");
+
+        if let Event::Key(
+            KeyEvent {
+                code: KeyCode::Esc, ..
+            }
+            | KeyEvent {
+                code: KeyCode::Char('c' | 'd'),
+                modifiers: KeyModifiers::CONTROL,
+                ..
+            },
+        ) = event
+        {
+            break;
+        }
+
         game.crossterm_event(&event);
         game.draw_game_ratatui(&mut terminal);
     }
